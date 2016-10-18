@@ -3534,7 +3534,7 @@ class Work(Base):
 
             # make sure the pool has most up-to-date idea of its presentation edition, 
             # and then ask what it is.
-            pool_edition_changed = pool.set_presentation_edition(policy)
+            pool_edition_changed = pool.set_presentation_edition()
             edition_metadata_changed = (
                 edition_metadata_changed or
                 pool_edition_changed   
@@ -5674,7 +5674,7 @@ class LicensePool(Base):
         return False
 
 
-    def editions_in_priority_order(self):
+    def editions_in_priority_order(self, external_editions=None):
         """Return all Editions that describe the Identifier associated with
         this LicensePool, in the order they should be used to create a
         presentation Edition for the LicensePool.
@@ -5698,13 +5698,13 @@ class LicensePool(Base):
                 return DataSource.PRESENTATION_EDITION_PRIORITY.index(source.name)
             else:
                 return -2
+        if external_editions:
+            editions = external_editions
+        else:
+            editions = self.identifier.primarily_identifies
+        return sorted(editions, key=sort_key)
 
-        return sorted(self.identifier.primarily_identifies, key=sort_key)
-
-
-    # TODO:  policy is not used in this method.  Removing argument
-    # breaks many-many tests, and needs own branch.
-    def set_presentation_edition(self, policy=None):
+    def set_presentation_edition(self, external_editions=None, source=None):
         """Create or update the presentation Edition for this LicensePool.
 
         The presentation Edition is made of metadata from all Editions
@@ -5715,7 +5715,7 @@ class LicensePool(Base):
         """
         _db = Session.object_session(self)
         old_presentation_edition = self.presentation_edition
-        all_editions = list(self.editions_in_priority_order())
+        all_editions = list(self.editions_in_priority_order(external_editions=external_editions))
         changed = False
 
         # Note: We can do a cleaner solution, if we refactor to not use metadata's 
@@ -5985,7 +5985,7 @@ class LicensePool(Base):
         if known_edition:
             presentation_edition = known_edition
         else:
-            self.set_presentation_edition(None)
+            self.set_presentation_edition()
             presentation_edition = self.presentation_edition
 
         logging.info("Calculating work for %r", presentation_edition)
@@ -6002,7 +6002,9 @@ class LicensePool(Base):
 
         if presentation_edition.is_presentation_for != self:
             raise ValueError(
-                "Presentation edition's license pool is not the license pool for which work is being calculated!")
+                "Presentation edition's license pool is not the license pool"\
+                " for which work is being calculated!"
+            )
 
         if not presentation_edition.title or not presentation_edition.author:
             presentation_edition.calculate_presentation()
@@ -6010,7 +6012,8 @@ class LicensePool(Base):
         if not presentation_edition.title:
             if presentation_edition.work:
                 logging.warn(
-                    "Edition %r has no title but has a Work assigned. This will not stand.", presentation_edition
+                    "Edition %r has no title but has a Work assigned. "\
+                    "This will not stand.", presentation_edition
                 )
             else:
                 logging.info("Edition %r has no title and it will not get a Work.", presentation_edition)

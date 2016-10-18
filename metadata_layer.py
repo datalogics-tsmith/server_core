@@ -1319,11 +1319,11 @@ class Metadata(MetaToModelUtility):
                 made_core_changes = True
 
 
-        # Create equivalencies between all given identifiers and
-        # the edition's primary identifier.
         self.update_contributions(_db, edition, metadata_client, 
                                   replace.contributions)
 
+        # Create equivalencies between all given identifiers and
+        # the edition's primary identifier.
         # TODO: remove equivalencies when replace.identifiers is True.
         if self.identifiers is not None:
             for identifier_data in self.identifiers:
