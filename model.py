@@ -5704,7 +5704,7 @@ class LicensePool(Base):
             editions = self.identifier.primarily_identifies
         return sorted(editions, key=sort_key)
 
-    def set_presentation_edition(self, external_editions=None, source=None):
+    def set_presentation_edition(self, external_editions=None):
         """Create or update the presentation Edition for this LicensePool.
 
         The presentation Edition is made of metadata from all Editions
